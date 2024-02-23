@@ -28,9 +28,9 @@ public class RedisDistributedLock {
      * @param expireTime     锁的超时时间（单位秒）
      * @return 锁标识
      */
-    public String tryLock(String lockKey, long acquireTimeout, int expireTime) throws RedisDistributedLockException{
+    public String tryLock(final String lockKey, long acquireTimeout, int expireTime) throws RedisDistributedLockException{
         // 随机生成一个value
-        String identifier = UUID.randomUUID().toString().replaceAll("-", "");
+        final String identifier = UUID.randomUUID().toString().replaceAll("-", "");
         // 锁名，即key值
         // 获取锁的超时时间，超过这个时间则放弃获取锁
         long end = System.currentTimeMillis() + acquireTimeout;

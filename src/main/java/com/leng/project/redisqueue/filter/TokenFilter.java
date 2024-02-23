@@ -7,11 +7,11 @@ import com.leng.project.redisqueue.exception.AppException;
 import com.leng.project.redisqueue.properties.QueueProperty;
 import com.leng.project.redisqueue.response.AppResult;
 import com.leng.project.redisqueue.utils.PropertyUtils;
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import javax.servlet.*;
-import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
