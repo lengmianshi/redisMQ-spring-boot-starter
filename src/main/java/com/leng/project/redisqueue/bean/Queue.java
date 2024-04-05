@@ -10,7 +10,7 @@ public class Queue {
     private String virtualHost;
     //队列类型：1普通队列，2延时队列
     private int queueType;
-    //总消息数
+    //待消费消息数
     private long total;
     //待确认数
     private long unAcked;

@@ -2,7 +2,9 @@ package com.leng.project.redisqueue;
 
 import com.leng.project.redisqueue.annotation.RedisDelayQueueListener;
 import com.leng.project.redisqueue.annotation.RedisQueueListener;
+import com.leng.project.redisqueue.annotation.RedisSubscribeListener;
 import com.leng.project.redisqueue.handler.QueueHandler;
+import com.leng.project.redisqueue.handler.SubscribeHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -18,6 +20,8 @@ public class RedisQueueRunner implements CommandLineRunner {
     private QueueHandler queueHandler;
     @Autowired
     private RedisQueueTemplate redisQueueTemplate;
+    @Autowired
+    private SubscribeHandler subscribeHandler;
 
     @Override
     public void run(String... args) {
@@ -41,6 +45,9 @@ public class RedisQueueRunner implements CommandLineRunner {
                         existManualAck = true;
                     }
                     queueHandler.registerListener(annotation, bean, method);
+                }else if(method.isAnnotationPresent(RedisSubscribeListener.class)){
+                    RedisSubscribeListener annotation = method.getDeclaredAnnotation(RedisSubscribeListener.class);
+                    subscribeHandler.registerListener(annotation, bean, method);
                 }
             }
         }

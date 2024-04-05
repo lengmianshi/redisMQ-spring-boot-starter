@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.lengmianshi</groupId>
     <artifactId>redisMQ-spring-boot-starter</artifactId>
-    <version>2.0.4</version>
+    <version>2.0.5</version>
     <name>starter</name>
     <description>starter</description>
 
@@ -32,18 +32,18 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
             <version>${springboot.version}</version>
             <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>io.lettuce</groupId>
-                    <artifactId>lettuce-core</artifactId>
-                </exclusion>
-            </exclusions>
+<!--            <exclusions>-->
+<!--                <exclusion>-->
+<!--                    <groupId>io.lettuce</groupId>-->
+<!--                    <artifactId>lettuce-core</artifactId>-->
+<!--                </exclusion>-->
+<!--            </exclusions>-->
         </dependency>
-        <dependency>
-            <groupId>redis.clients</groupId>
-            <artifactId>jedis</artifactId>
-            <version>5.1.0</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>redis.clients</groupId>-->
+<!--            <artifactId>jedis</artifactId>-->
+<!--            <version>5.1.0</version>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>

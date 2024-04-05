@@ -16,6 +16,7 @@
 - 开箱即用，你几乎不用添加额外的配置
 - 支持消息队列、延时队列，并提供精细化配置参数
 - 提供消息确认机制
+- 支持发布与订阅模式
 - 支持虚拟空间，不同虚拟空间的数据互相隔离
 - 支持web控制台，实时查看各个队列的消费情况
 
@@ -29,7 +30,7 @@ springboot3.0以下版本:
 <dependency>
     <groupId>io.github.lengmianshi</groupId>
     <artifactId>redisMQ-spring-boot-starter</artifactId>
-    <version>1.0.4</version>
+    <version>1.0.5</version>
 </dependency>
 
 <!-- 以下配置可以改为你自己的版本 -->
@@ -67,7 +68,7 @@ springboot3.0：
 <dependency>
     <groupId>io.github.lengmianshi</groupId>
     <artifactId>redisMQ-spring-boot-starter</artifactId>
-    <version>2.0.4</version>
+    <version>2.0.5</version>
 </dependency>
         
 <!-- 以下配置可以改为你自己的版本 -->
@@ -104,6 +105,9 @@ spring:
         max-idle: 10
         min-idle: 10
     timeout: 2000
+  # 覆盖重复注册的bean
+  main:
+    allow-bean-definition-overriding: true
 ```
 springboot3.0：
 ```yaml
@@ -119,7 +123,12 @@ spring:
           max-idle: 10
           min-idle: 10
       timeout: 2000
+  # 覆盖重复注册的bean
+  main:
+    allow-bean-definition-overriding: true
 ```
+
+
 
 
 ## 消息队列
@@ -322,12 +331,78 @@ public class DelayQueueConsumer {
 }
 ```
 
+## 发布与订阅模式
+发布者向某个channel发布消息，所有订阅了该channel的消费端均能接受消息
+
+### 消费端
+
+使用`@RedisSubscribeListener`修饰某个方法，即可定义一个消费端，其中`channel`表示要订阅的频道：
+```java
+import com.alibaba.fastjson.JSONObject;
+import com.leng.project.redisqueue.annotation.RedisSubscribeListener;
+import org.springframework.stereotype.Component;
+
+@Component
+public class ChannelConsumer {
+
+    //带参数
+    @RedisSubscribeListener(channel = "test_channel")
+    public void test(JSONObject message) {
+        System.out.println("test_channel:" + message);        
+    }
+    
+    //不带参数
+    @RedisSubscribeListener(channel = "test_channel_02")
+    public void test() {
+      System.out.println("test_channel_02");
+    }
+    
+}
+```
+
+主题还可以使用通配符：
+```java
+import com.alibaba.fastjson.JSONObject;
+import com.leng.project.redisqueue.annotation.RedisSubscribeListener;
+import com.leng.project.redisqueue.utils.SubscribeUtils;
+import org.springframework.stereotype.Component;
+
+@Component
+public class ChannelConsumer {
+    
+    @RedisSubscribeListener(channel = "test_channel*")
+    public void test2() {
+        System.out.println("test_channel*:" + SubscribeUtils.currentChannel());
+    }
+}
+```
+使用通配符后，如果想确切地知道是哪个channel产生的消息，可以使用`SubscribeUtils.currentChannel()`
+
+### 生产者
+```java
+@Autowired
+private RedisQueueTemplate redisQueueTemplate;
+
+public String testSendChannelMessage(){
+    JSONObject message = new JSONObject();
+    message.put("bondId", "17f62f1dfb5afb12e8d67cd651c1df53");
+    message.put("year", 2022);
+    //带参数
+    redisQueueTemplate.sendChannelMessage("test_channel", message);
+    //不带参数
+    redisQueueTemplate.sendChannelMessage("test_channel_02");
+    return "OK";
+}
+
+```
+
+
 ## 虚拟空间
 参考了RabbitMQ的设计。虚拟空间很有必要，例如，开发环境和测试环境的数据如果没有隔离，在调试时被测试环境的消费端干扰。
 配置虚拟空间：
 ```yaml
 queue:
-  virtual-host: '/dev'  #默认为 /
+  virtual-host: /dev  #默认为 /
 ```
 
 ## Web管理平台

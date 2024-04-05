@@ -14,6 +14,16 @@ public class Constant {
      */
     private static final String PREFIX = "QUEUE:";
 
+    /**
+     * 当前channel的key，要线程本地化变量中使用
+     */
+    public static final String CURRENT_SUBSCRIBE_CHANNEL_KEY = "current_subscribe_channel";
+
+    /**
+     * 刷新队列缓存的主题
+     */
+    public static final String REFRESH_ALL_QUEUE_CACHE_CHANNEL = "refresh_all_queue_cache";
+
 
     /**
      * 队列的数据结构
