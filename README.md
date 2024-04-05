@@ -78,11 +78,6 @@ springboot3.0：
     <version>3.2.1</version>
 </dependency>
 <dependency>
-    <groupId>redis.clients</groupId>
-    <artifactId>jedis</artifactId>
-    <version>5.1.0</version>
-</dependency>
-<dependency>
     <groupId>com.alibaba</groupId>
     <artifactId>fastjson</artifactId>
     <version>1.2.83</version>
