@@ -355,7 +355,7 @@ public class ChannelConsumer {
 }
 ```
 
-主题还可以使用通配符：
+channel还可以使用通配符：
 ```java
 import com.alibaba.fastjson.JSONObject;
 import com.leng.project.redisqueue.annotation.RedisSubscribeListener;
