@@ -1,6 +1,7 @@
 package com.leng.project.redisqueue;
 
 import com.alibaba.fastjson.JSONObject;
+import com.leng.project.redisqueue.annotation.RedisSubscribeListener;
 import com.leng.project.redisqueue.bean.Annotation;
 import com.leng.project.redisqueue.bean.DelayMessageParam;
 import com.leng.project.redisqueue.bean.Message;
@@ -14,6 +15,7 @@ import org.springframework.data.redis.connection.DataType;
 import org.springframework.data.redis.core.*;
 import org.springframework.util.Assert;
 
+import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -29,6 +31,29 @@ public class RedisQueueTemplate {
     private RedisTemplate<String, String> redisTemplate;
     @Autowired
     private RedisDistributedLock distributedLock;
+
+    //所有虚拟空间下的队列
+    private Map<String, Integer> allQueueMap = null;
+
+    @PostConstruct
+    private void init() {
+        allQueueMap = new HashMap<>();
+        //获取所有虚拟空间下的队列
+        Set<String> members = redisTemplate.opsForSet().members(Constant.getAllQueueKey());
+        if (members == null || members.isEmpty()) {
+            return;
+        }
+
+        members.forEach(e -> {
+            String[] array = e.split(";");
+            allQueueMap.put(array[0] + ";" + array[1], Integer.valueOf(array[2]));
+        });
+    }
+
+    @RedisSubscribeListener(channel = Constant.REFRESH_ALL_QUEUE_CACHE_CHANNEL)
+    public void refreshAllQueueMap() {
+        this.init();
+    }
 
 
     /**
@@ -545,9 +570,45 @@ public class RedisQueueTemplate {
      * @param queue
      */
     public void registerQueue(String queue, int type) {
+        //判断类型是否匹配
+        Integer oldType = allQueueMap.get(queue + ";" + Constant.getVirtualHost());
+        if (oldType != null) {
+            if (oldType != type) {
+                throw new RuntimeException("队列类型不匹配");
+            }
+            return;
+        }
+
         String key = Constant.getAllQueueKey();
         String element = queue + ";" + Constant.getVirtualHost() + ";" + type;
         redisTemplate.opsForSet().add(key, element);
+
+        if (oldType == null) {
+            //发布消息
+            this.sendChannelMessage(Constant.REFRESH_ALL_QUEUE_CACHE_CHANNEL);
+        }
+    }
+
+
+    /**
+     * 发布与订阅模式下发送消息
+     *
+     * @param channel 要订阅的频道
+     * @param <T>
+     */
+    public <T> void sendChannelMessage(String channel) {
+        redisTemplate.convertAndSend(channel, "");
+    }
+
+    /**
+     * 发布与订阅模式下发送消息
+     *
+     * @param channel 要订阅的频道
+     * @param message 要发送的消息，不能为null
+     * @param <T>
+     */
+    public <T> void sendChannelMessage(String channel, T message) {
+        redisTemplate.convertAndSend(channel, JSONObject.toJSONString(message));
     }
 }
 

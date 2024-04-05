@@ -1,6 +1,7 @@
 package com.leng.project.redisqueue.service;
 
 import com.leng.project.redisqueue.Constant;
+import com.leng.project.redisqueue.RedisQueueTemplate;
 import com.leng.project.redisqueue.bean.Queue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -14,6 +15,8 @@ import java.util.stream.Collectors;
 public class QueueService {
     @Autowired
     private StringRedisTemplate redisTemplate;
+    @Autowired
+    private RedisQueueTemplate redisQueueTemplate;
 
 
     public List<Queue> list(String vhost) {
@@ -36,7 +39,7 @@ public class QueueService {
                     queue.setVirtualHost(array[1]);
                     queue.setQueueType(Integer.valueOf(array[2]));
 
-                    //查询总消息数
+                    //查询待消费消息数
                     Long size = null;
                     if (queue.getQueueType() == Constant.QueueType.LIST) {
                         size = redisTemplate.opsForList().size(Constant.getQueueKey(queue.getQueue(), queue.getVirtualHost()));
@@ -115,6 +118,9 @@ public class QueueService {
     public void del(String vhost, String queue, int queueType) {
         this.clear(vhost, queue);
         redisTemplate.opsForSet().remove(Constant.getAllQueueKey(), queue + ";" + vhost + ";" + queueType);
+
+        //发布消息，刷新缓存
+        redisQueueTemplate.sendChannelMessage(Constant.REFRESH_ALL_QUEUE_CACHE_CHANNEL);
     }
 
     public List<String> vhostList() {

@@ -4,6 +4,7 @@ import com.leng.project.redisqueue.RedisQueueRunner;
 import com.leng.project.redisqueue.RedisQueueTemplate;
 import com.leng.project.redisqueue.filter.TokenFilter;
 import com.leng.project.redisqueue.handler.QueueHandler;
+import com.leng.project.redisqueue.handler.SubscribeHandler;
 import com.leng.project.redisqueue.lock.RedisDistributedLock;
 import com.leng.project.redisqueue.properties.QueueProperty;
 import com.leng.project.redisqueue.service.QueueService;
@@ -15,6 +16,8 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 @Configuration
 @EnableConfigurationProperties(QueueProperty.class)
@@ -40,6 +43,12 @@ public class RedisQueueAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(SubscribeHandler.class)
+    public SubscribeHandler subscribeHandler() {
+        return new SubscribeHandler();
+    }
+
+    @Bean
     @ConditionalOnMissingBean(RedisQueueRunner.class)
     public RedisQueueRunner redisQueueRunner() {
         return new RedisQueueRunner();
@@ -51,13 +60,21 @@ public class RedisQueueAutoConfiguration {
         return new PropertyUtils();
     }
 
+
+    @Bean
+    public RedisMessageListenerContainer redisContainer(RedisConnectionFactory factory) {
+        final RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(factory);
+        return container;
+    }
+
     @Bean
     @ConditionalOnProperty(prefix = "queue.console", name = "enable", havingValue = "true", matchIfMissing = true)
-    public QueueService queueService(){
+    public QueueService queueService() {
         return new QueueService();
     }
 
-//    @Bean(name = "druidStatView")
+    //    @Bean(name = "druidStatView")
 //    public ServletRegistrationBean druidStatView() {
 //        ServletRegistrationBean registrationBean = new ServletRegistrationBean(new StatViewServlet(), "/druid/*");
 //        //IP白名单 (没有配置或者为空，则允许所有访问)
