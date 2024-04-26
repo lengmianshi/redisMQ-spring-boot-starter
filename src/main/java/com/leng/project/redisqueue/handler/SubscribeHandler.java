@@ -3,6 +3,7 @@ package com.leng.project.redisqueue.handler;
 import com.leng.project.redisqueue.annotation.RedisSubscribeListener;
 import com.leng.project.redisqueue.listener.SubscribeListener;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
@@ -11,6 +12,7 @@ import java.lang.reflect.Method;
 
 public class SubscribeHandler {
     @Autowired
+    @Qualifier("_RedisQueueRedisMessageListenerContainer")
     private RedisMessageListenerContainer container;
 
     public void registerListener(RedisSubscribeListener annotation, Object bean, Method method) {

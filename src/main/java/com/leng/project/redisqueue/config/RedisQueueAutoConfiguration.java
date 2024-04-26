@@ -30,7 +30,7 @@ public class RedisQueueAutoConfiguration {
         return new RedisQueueTemplate();
     }
 
-    @Bean
+    @Bean("_RedisQueueRedisDistributedLock")
     @ConditionalOnMissingBean(RedisDistributedLock.class)
     public RedisDistributedLock redisDistributedLock() {
         return new RedisDistributedLock();
@@ -54,21 +54,22 @@ public class RedisQueueAutoConfiguration {
         return new RedisQueueRunner();
     }
 
-    @Bean
+    @Bean("_RedisQueuePropertyUtils")
     @ConditionalOnMissingBean(PropertyUtils.class)
     public PropertyUtils propertyUtils() {
         return new PropertyUtils();
     }
 
 
-    @Bean
+    @Bean("_RedisQueueRedisMessageListenerContainer")
+    @ConditionalOnMissingBean(RedisMessageListenerContainer.class)
     public RedisMessageListenerContainer redisContainer(RedisConnectionFactory factory) {
         final RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(factory);
         return container;
     }
 
-    @Bean
+    @Bean("_RedisQueueQueueService")
     @ConditionalOnProperty(prefix = "queue.console", name = "enable", havingValue = "true", matchIfMissing = true)
     public QueueService queueService() {
         return new QueueService();
