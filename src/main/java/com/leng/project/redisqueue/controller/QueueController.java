@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-@Controller
+@Controller("_RedisQueueController")
 @RequestMapping("queue")
 @ConditionalOnWebApplication
 @ConditionalOnProperty(prefix = "queue.console", name = "enable", havingValue = "true", matchIfMissing = true)

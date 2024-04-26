@@ -17,7 +17,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 @Configuration
@@ -31,21 +30,7 @@ public class RedisQueueAutoConfiguration {
         return new RedisQueueTemplate();
     }
 
-//    @Bean
-//    public LettuceConnectionFactory redisConnectionFactory() {
-//        return new LettuceConnectionFactory();
-//    }
-
-
-    @Bean
-    @ConditionalOnMissingBean(StringRedisTemplate.class)
-    public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
-        StringRedisTemplate template = new StringRedisTemplate();
-        template.setConnectionFactory(redisConnectionFactory);
-        return template;
-    }
-
-    @Bean
+    @Bean("_RedisQueueRedisDistributedLock")
     @ConditionalOnMissingBean(RedisDistributedLock.class)
     public RedisDistributedLock redisDistributedLock() {
         return new RedisDistributedLock();
@@ -69,21 +54,22 @@ public class RedisQueueAutoConfiguration {
         return new RedisQueueRunner();
     }
 
-    @Bean
+    @Bean("_RedisQueuePropertyUtils")
     @ConditionalOnMissingBean(PropertyUtils.class)
     public PropertyUtils propertyUtils() {
         return new PropertyUtils();
     }
 
 
-    @Bean
+    @Bean("_RedisQueueRedisMessageListenerContainer")
+    @ConditionalOnMissingBean(RedisMessageListenerContainer.class)
     public RedisMessageListenerContainer redisContainer(RedisConnectionFactory factory) {
         final RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(factory);
         return container;
     }
 
-    @Bean
+    @Bean("_RedisQueueQueueService")
     @ConditionalOnProperty(prefix = "queue.console", name = "enable", havingValue = "true", matchIfMissing = true)
     public QueueService queueService() {
         return new QueueService();
