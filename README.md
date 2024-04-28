@@ -30,7 +30,7 @@ springboot3.0以下版本:
 <dependency>
     <groupId>io.github.lengmianshi</groupId>
     <artifactId>redisMQ-spring-boot-starter</artifactId>
-    <version>1.0.6</version>
+    <version>1.0.7</version>
 </dependency>
 
 <!-- 以下配置可以改为你自己的版本 -->
@@ -68,7 +68,7 @@ springboot3.0：
 <dependency>
     <groupId>io.github.lengmianshi</groupId>
     <artifactId>redisMQ-spring-boot-starter</artifactId>
-    <version>2.0.6</version>
+    <version>2.0.7</version>
 </dependency>
         
 <!-- 以下配置可以改为你自己的版本 -->

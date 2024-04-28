@@ -62,7 +62,7 @@ public class RedisQueueAutoConfiguration {
 
 
     @Bean("_RedisQueueRedisMessageListenerContainer")
-    @ConditionalOnMissingBean(RedisMessageListenerContainer.class)
+//    @ConditionalOnMissingBean(RedisMessageListenerContainer.class)
     public RedisMessageListenerContainer redisContainer(RedisConnectionFactory factory) {
         final RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(factory);
