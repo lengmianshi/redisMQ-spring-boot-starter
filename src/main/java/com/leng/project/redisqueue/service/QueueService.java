@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -81,6 +82,18 @@ public class QueueService {
     }
 
     public void clear(String vhost, String queue) {
+        //待确认消息
+        String key = Constant.getAckQueueKey(vhost);
+        Set<String> elements = redisTemplate.opsForZSet().range(key, 0, -1);
+        List<String> removeList = new ArrayList<>();
+        if (elements != null && elements.size() > 0) {
+            elements.forEach(e -> {
+                if (e.split(";")[1].equals(queue)) {
+                    removeList.add(e);
+                }
+            });
+        }
+
         redisTemplate.execute(new SessionCallback<Object>() {
             @Override
             public Object execute(RedisOperations operations) throws DataAccessException {
@@ -94,19 +107,9 @@ public class QueueService {
                 operations.delete(key);
 
                 //删除待确认消息
-                key = Constant.getAckQueueKey(vhost);
-                Set<String> elements = operations.opsForZSet().range(key, 0, -1);
-                if (elements != null && elements.size() > 0) {
-                    List<String> removeList = new ArrayList<>();
-                    elements.forEach(e -> {
-                        if (e.split(";")[1].equals(queue)) {
-                            removeList.add(e);
-                        }
-                    });
-
-                    if (removeList.size() > 0) {
-                        operations.opsForZSet().remove(key, removeList);
-                    }
+                if (removeList.size() > 0) {
+                    key = Constant.getAckQueueKey(vhost);
+                    operations.opsForZSet().remove(key, removeList.toArray(new String[removeList.size()]));
                 }
 
                 operations.exec();

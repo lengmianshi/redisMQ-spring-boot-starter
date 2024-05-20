@@ -6,9 +6,13 @@ import com.leng.project.redisqueue.annotation.RedisDelayQueueListener;
 import com.leng.project.redisqueue.annotation.RedisQueueListener;
 import com.leng.project.redisqueue.bean.Annotation;
 import com.leng.project.redisqueue.bean.Message;
+import com.leng.project.redisqueue.exception.AckException;
+import com.leng.project.redisqueue.exception.ConsumeException;
+import com.leng.project.redisqueue.utils.RetryUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.RedisConnectionFailureException;
+import org.springframework.retry.support.RetryTemplate;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -18,6 +22,7 @@ import java.util.function.Supplier;
 public class QueueHandler {
     @Autowired
     private RedisQueueTemplate redisQueueTemplate;
+    private RetryTemplate retryTemplate = RetryUtils.getTemplate(3, 300);
 
 
     /**
@@ -36,6 +41,9 @@ public class QueueHandler {
         an.setFrequency(annotation.frequency());
         an.setClazz(method.getParameterTypes()[0]);
         an.setQueueType(Constant.QueueType.ZSET);
+        an.setMaxAttempts(annotation.maxAttempts());
+        an.setBackOffPeriod(annotation.backOffPeriod());
+        an.setRetryTemplate(RetryUtils.getTemplate(annotation.maxAttempts(), annotation.backOffPeriod()));
 
         this.registerListener0(an, bean, method,
                 () -> redisQueueTemplate.takeDelayMessage(an)
@@ -59,6 +67,9 @@ public class QueueHandler {
         an.setFrequency(annotation.frequency());
         an.setClazz(method.getParameterTypes()[0]);
         an.setQueueType(Constant.QueueType.LIST);
+        an.setMaxAttempts(annotation.maxAttempts());
+        an.setBackOffPeriod(annotation.backOffPeriod());
+        an.setRetryTemplate(RetryUtils.getTemplate(annotation.maxAttempts(), annotation.backOffPeriod()));
 
         this.registerListener0(an, bean, method,
                 () -> redisQueueTemplate.takeMessage(an)
@@ -83,7 +94,6 @@ public class QueueHandler {
             new Thread(() -> {
                 while (true) {
                     List<Message<?>> messages = null;
-                    Message currentMessage = null;
                     try {
                         //从队列中获取消息
                         messages = supplier.get();
@@ -94,21 +104,53 @@ public class QueueHandler {
 
                         //调用消费方法
                         for (Message message : messages) {
-                            currentMessage = message;
-                            method.invoke(bean, message.getData());
+                            try {
+                                annotation.getRetryTemplate().execute(
+                                        //重试执行的方法
+                                        (context) -> method.invoke(bean, message.getData()),
+                                        //多次重试后依然失败的回调
+                                        (context) -> {
+                                            Throwable t = context.getLastThrowable();
+                                            //抛出异常
+                                            throw new ConsumeException(t);
+                                        });
+                                if (!annotation.isAutoAck()) {
+                                    //手动确认消息
+                                    //如果消息被消费了，但确认失败或是还没来得及确认进程就结束了，待确认的消息会重新入队，这时消费端需自行判断处理，避免重复消费
+                                    retryTemplate.execute(
+                                            (context -> {
+                                                redisQueueTemplate.ack(message);
+                                                return null;
+                                            }),
+                                            (context -> {
+                                                Throwable t = context.getLastThrowable();
+                                                //抛出异常
+                                                throw new AckException(t);
+                                            }));
 
-                            if (!annotation.isAutoAck()) {
-                                //手动确认消息
-                                //如果消息被消费了，但确认失败或是还没来得及确认进程就结束了，待确认的消息会重新入队，这时消费端需自行判断处理，避免重复消费
-                                redisQueueTemplate.ack(message);
+                                }
+                            } catch (ConsumeException e) {
+                                log.error("队列消费出错：id={}, queue={}, data={}", message.getId(), annotation.getQueue(), message.getData(), e);
+                                //重新入队
+                                if (annotation.isRequeue()) {
+                                    retryTemplate.execute((ctx -> {
+                                        redisQueueTemplate.requeue(message);
+                                        return null;
+                                    }));
+                                }
+                            } catch (AckException e) {
+                                log.error("队列确认出错：id={}, queue={}, data={}", message.getId(), annotation.getQueue(), message.getData(), e);
+                            } catch (Exception e) {
+                                log.error("", e);
                             }
+
                         }
 
                     } catch (RedisConnectionFailureException e) {
                         //一般是进程退出时报出的异常
                         log.warn(e.getMessage());
                     } catch (Exception e) {
-                        log.error("队列消费出错：queue={}, message={}", annotation.getQueue(), currentMessage, e);
+                        log.error("队列出错：queue={}", annotation.getQueue(), e);
                     }
                 }
             }).start();

@@ -30,7 +30,7 @@ springboot3.0以下版本:
 <dependency>
     <groupId>io.github.lengmianshi</groupId>
     <artifactId>redisMQ-spring-boot-starter</artifactId>
-    <version>1.0.7</version>
+    <version>1.0.8</version>
 </dependency>
 
 <!-- 以下配置可以改为你自己的版本 -->
@@ -68,7 +68,7 @@ springboot3.0：
 <dependency>
     <groupId>io.github.lengmianshi</groupId>
     <artifactId>redisMQ-spring-boot-starter</artifactId>
-    <version>2.0.7</version>
+    <version>2.0.8</version>
 </dependency>
         
 <!-- 以下配置可以改为你自己的版本 -->
@@ -183,6 +183,18 @@ public class QueueConsumer {
         System.out.println(message);
     }
 
+    //消费失败尝试3次，每次间隔500毫秒
+    @RedisQueueListener(queue = "test_queue4", maxAttempts = 3, backOffPeriod = 500)
+    public void test4(JSONObject message){
+      System.out.println(message);
+    }
+
+
+    //消费失败后重新入队
+    @RedisQueueListener(queue = "test_queue4", maxAttempts = 3, backOffPeriod = 500, requeue = true)
+    public void test5(JSONObject message){
+      System.out.println(message);
+    }
 }
 ```
 
@@ -196,40 +208,62 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface RedisQueueListener {
-    /**
-     * 队列名
-     *
-     * @return
-     */
-    String queue() default "";
+  /**
+   * 队列名
+   *
+   * @return
+   */
+  String queue() default "";
 
-    /**
-     * 消费者线程数
-     *
-     * @return
-     */
-    int consumers() default 1;
+  /**
+   * 消费者线程数
+   *
+   * @return
+   */
+  int consumers() default 1;
 
-    /**
-     * 是否自动确认
-     *
-     * @return
-     */
-    boolean autoAck() default true;
+  /**
+   * 是否自动确认
+   *
+   * @return
+   */
+  boolean autoAck() default true;
 
-    /**
-     * 一次从队列中取多少数据
-     *
-     * @return
-     */
-    int prefetch() default 50;
+  /**
+   * 一次从队列中取多少数据
+   *
+   * @return
+   */
+  int prefetch() default 100;
 
-    /**
-     * 获取消息的频率，单位秒
-     * @return
-     */
-    long frequency() default 2;
+  /**
+   * 获取消息的频率，单位秒
+   *
+   * @return
+   */
+  long frequency() default 2;
+
+  /**
+   * 失败重试时最多执行的次数，至少为1
+   *
+   * @return
+   */
+  int maxAttempts() default 1;
+
+  /**
+   * 失败重试时间隔时长，毫秒，必须大于0
+   *
+   * @return
+   */
+  long backOffPeriod() default 3000;
+
+  /**
+   * 消费失败时是否重新入队
+   * @return
+   */
+  boolean requeue() default false;
 }
+
 ```
 其中：
 - consumers：单个实例下启动多少个消费线程，默认为1
@@ -238,6 +272,8 @@ public @interface RedisQueueListener {
   - 手动确认：消费线程从队列中取出消息，并将消息写入待确认队列中；如果消费失败，则一段时间后（15分钟）会重新入队，消费端要做幂等性处理
 - prefetch：一个消费线程一次性从队列中取出多少条消息，因为涉及锁的竞争，不宜过小，默认为50
 - frequency：单个消费线程每隔多少秒获取一次消息，默认为2，最小值为1。有人可能会奇怪，消息不是应该即时消费吗？不是越快越好吗？实际上，有些业务场景对消息的实时性要求很低，几天、几个月、甚至一年才执行一次，这时我们完全可以把frequency调大，以减轻redis的压力
+- maxAttempts：失败重试时最多执行的次数，至少为1
+- requeue：当消费失败时，是否将消息重新加入队列中。如果为true，则消息会不断投递，直到消费成功为止
 
 ## 延时队列
 延时队列的常用场景如用户下单，xx分钟后没有支付则自动关闭订单；已支持的订单，xxx天后自动确认收货等。
@@ -322,6 +358,19 @@ public class DelayQueueConsumer {
     public void test3(JSONObject message){
         System.out.println(message);
     }
+
+  //消费失败尝试3次，每次间隔500毫秒
+  @RedisDelayQueueListener(queue = "test_delay_queue4", maxAttempts = 3, backOffPeriod = 500)
+  public void test4(JSONObject message){
+    System.out.println(message);
+  }
+
+
+  //消费失败后重新入队
+  @RedisDelayQueueListener(queue = "test_delay_queue5", maxAttempts = 3, backOffPeriod = 500, requeue = true)
+  public void test5(JSONObject message){
+    System.out.println(message);
+  }
 
 }
 ```

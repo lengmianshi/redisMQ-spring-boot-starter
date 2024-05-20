@@ -88,7 +88,7 @@ public class RedisQueueAutoConfiguration {
 //        return registrationBean;
 //    }
 //
-    @Bean(name = "queueTokenFilter")
+    @Bean(name = "_queueTokenFilter")
     public FilterRegistrationBean queueTokenFilter() {
         FilterRegistrationBean registrationBean = new FilterRegistrationBean(new TokenFilter());
         registrationBean.setName("queueTokenFilter");
