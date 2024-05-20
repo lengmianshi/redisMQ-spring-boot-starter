@@ -68,8 +68,7 @@ public class RedisQueueTemplate {
         //注册队列
         this.registerQueue(queue, Constant.QueueType.ZSET);
 
-        LocalDateTime now = LocalDateTime.now();
-        long epochSecond = now.toInstant(ZoneOffset.of("+8")).getEpochSecond();
+        long epochSecond = getEpochSecond();
 
         //消息id
         String id = StringUtils.getUUID();
@@ -323,7 +322,7 @@ public class RedisQueueTemplate {
     }
 
     /**
-     * 将待确认消息重新入队
+     * 将待确认消息重新入队（2小时前待确认数据）
      *
      * @param annotation
      * @return
@@ -333,7 +332,7 @@ public class RedisQueueTemplate {
         final String key = Constant.getAckQueueKey();
         this.takeMessage0(
                 annotation,
-                () -> redisTemplate.opsForZSet().rangeByScore(key, 0, getEpochSecond(), 0, Math.max(annotation.getPrefetch(), 1)),
+                () -> redisTemplate.opsForZSet().rangeByScore(key, 0, getEpochSecond() - 3600 * 2, 0, Math.max(annotation.getPrefetch(), 1)),
                 ((elements, messageMap) -> {
                     redisTemplate.execute(new SessionCallback<Void>() {
                         @Override
@@ -407,15 +406,23 @@ public class RedisQueueTemplate {
      * @throws InterruptedException
      */
     public List<Message<?>> takeMessage0(Annotation annotation, Supplier<Collection<String>> elemSupplier, BiFunction<Collection<String>, Map<String, Message>, List<Message<?>>> resultFun) {
+        //查询频率
+        if (annotation.getFrequency() < 1) {
+            annotation.setFrequency(2);
+        }
+
+        //标志，用于在应启动时就能执行一次，而不用等待
+        boolean flag = false;
+
         while (true) {
-            try {
-                //查询频率
-                if (annotation.getFrequency() < 1) {
-                    annotation.setFrequency(2);
+            if (flag) {
+                try {
+                    TimeUnit.SECONDS.sleep(annotation.getFrequency());
+                } catch (InterruptedException e) {
+                    //忽略
                 }
-                TimeUnit.SECONDS.sleep(annotation.getFrequency());
-            } catch (InterruptedException e) {
-                //忽略
+            } else {
+                flag = true;
             }
 
             //查询队列中的元素
@@ -453,6 +460,10 @@ public class RedisQueueTemplate {
                         message.setId(id);
                         message.setQueue(annotation.getQueue());
                         message.setData(JSONObject.parseObject((String) dataList.get(i), annotation.getClazz()));
+                        if (message.getData() == null) {
+                            log.warn("message data is null: id={}, queue={}", id, message.getQueue());
+                            continue; //一般不会发生
+                        }
                         messageMap.put(id, message);
                     }
                 }
@@ -483,7 +494,7 @@ public class RedisQueueTemplate {
                         operations.multi();
 
                         List<Message<?>> list = elements.stream().map(messageId -> {
-                            //删除元素
+                            //删除消息
                             operations.opsForList().remove(key, 1, messageId);
 
                             Message<?> data = messageMap.get(messageId);
@@ -497,7 +508,10 @@ public class RedisQueueTemplate {
                             if (!annotation.isAutoAck()) {
                                 //手动确认时，先加消息添加到待确认
                                 //待确认消息的格式：消息id;队列
-                                operations.opsForZSet().add(Constant.getAckQueueKey(), buildUnAckMessage(messageId, annotation.getQueue(), Constant.QueueType.LIST), getEpochSecond());
+                                operations.opsForZSet().add(
+                                        Constant.getAckQueueKey(),
+                                        buildUnAckMessage(messageId, annotation.getQueue(), Constant.QueueType.LIST),
+                                        getEpochSecond());
 
                             } else {
                                 //自动确认时，需要自动删除消息对应的数据
@@ -537,6 +551,36 @@ public class RedisQueueTemplate {
             }
         });
     }
+
+
+    /**
+     * 消息重新入队，并放到队首，优先消费
+     *
+     * @param message
+     */
+    public void requeue(Message message) {
+        redisTemplate.execute(new SessionCallback() {
+            @Override
+            public Object execute(RedisOperations operations) throws DataAccessException {
+                operations.multi();
+                //从待确认队列中删除
+                operations.opsForZSet().remove(Constant.getAckQueueKey(), buildUnAckMessage(message.getId(), message.getQueue(), message.getType()));
+                //重新入队
+                if (message.getType() == Constant.QueueType.LIST) {
+                    operations.opsForList().leftPush(Constant.getQueueKey(message.getQueue()), message.getId());
+                }else {
+                    operations.opsForZSet().add(
+                            Constant.getQueueKey(message.getQueue()),
+                            message.getId(),
+                            getEpochSecond()
+                    );
+                }
+                operations.exec();
+                return null;
+            }
+        });
+    }
+
 
     /**
      * 获取队列长度

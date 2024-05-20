@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.lengmianshi</groupId>
     <artifactId>redisMQ-spring-boot-starter</artifactId>
-    <version>1.0.7</version>
+    <version>1.0.8</version>
     <name>starter</name>
     <description>starter</description>
 
@@ -43,18 +43,18 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
             <version>${springboot.version}</version>
             <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>io.lettuce</groupId>
-                    <artifactId>lettuce-core</artifactId>
-                </exclusion>
-            </exclusions>
+            <!--            <exclusions>-->
+            <!--                <exclusion>-->
+            <!--                    <groupId>io.lettuce</groupId>-->
+            <!--                    <artifactId>lettuce-core</artifactId>-->
+            <!--                </exclusion>-->
+            <!--            </exclusions>-->
         </dependency>
-        <dependency>
-            <groupId>redis.clients</groupId>
-            <artifactId>jedis</artifactId>
-            <version>2.9.2</version>
-        </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>redis.clients</groupId>-->
+        <!--            <artifactId>jedis</artifactId>-->
+        <!--            <version>5.1.0</version>-->
+        <!--        </dependency>-->
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
@@ -65,6 +65,11 @@
             <artifactId>lombok</artifactId>
             <version>1.18.24</version>
             <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+            <version>2.0.4</version>
         </dependency>
     </dependencies>
 
@@ -119,38 +124,6 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <!-- source包 -->
-                    <plugin>
-                        <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-source-plugin -->
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-source-plugin</artifactId>
-                        <version>3.2.1</version>
-
-                        <configuration>
-                            <attach>true</attach>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <phase>compile</phase>
-                                <goals>
-                                    <goal>jar</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <!-- 生成doc文档 -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>attach-javadocs</id>
-                                <goals>
-                                    <goal>jar</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
                 </plugins>
             </build>
         </profile>
@@ -167,4 +140,40 @@
             <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
+
+    <build>
+      <plugins>
+        <!-- source包 -->
+          <plugin>
+              <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-source-plugin -->
+              <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.2.1</version>
+                <configuration>
+                    <attach>true</attach>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+          <!-- 生成doc文档 -->
+          <!--          <plugin>-->
+          <!--            <groupId>org.apache.maven.plugins</groupId>-->
+          <!--            <artifactId>maven-javadoc-plugin</artifactId>-->
+          <!--            <executions>-->
+          <!--                <execution>-->
+          <!--                    <id>attach-javadocs</id>-->
+          <!--                    <goals>-->
+          <!--                        <goal>jar</goal>-->
+          <!--                    </goals>-->
+          <!--                </execution>-->
+          <!--            </executions>-->
+          <!--        </plugin>-->
+      </plugins>
+    </build>
 </project>
